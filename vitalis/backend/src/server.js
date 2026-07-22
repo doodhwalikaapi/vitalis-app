@@ -14,6 +14,7 @@ const workoutRoutes = require('./routes/workouts');
 const nutritionRoutes = require('./routes/nutrition');
 const dashboardRoutes = require('./routes/dashboard');
 const assistantRoutes = require('./routes/assistant');
+const imagesRoutes = require('./routes/images');
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use('/api/workouts', workoutRoutes);
 app.use('/api/nutrition', nutritionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/assistant', assistantRoutes);
+app.use('/api/images', imagesRoutes);
 
 app.use((req, res) => res.status(404).json({ error: 'Not found.' }));
 

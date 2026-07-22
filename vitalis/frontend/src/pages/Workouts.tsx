@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
-import Illustration from '../components/Illustration';
+import RemoteImage from '../components/RemoteImage';
 
 function primaryVariant(tags: string[]): any {
   const order = ['strength', 'hiit', 'cardio', 'endurance', 'mobility', 'full_body'];
@@ -77,7 +77,7 @@ export default function Workouts() {
     const isDone = completedIds.has(ex.id);
     return (
       <div className="card" style={{ marginBottom: 12, overflow: 'hidden', padding: 0 }}>
-        <Illustration variant={primaryVariant(ex.tags)} seed={ex.id} height={110} />
+        <RemoteImage query={`${ex.name} exercise fitness`} fallbackVariant={primaryVariant(ex.tags)} seed={ex.id} height={140} />
         <div style={{ padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', cursor: 'pointer' }} onClick={() => setExpanded(isOpen ? null : ex.id)}>
           <div>
