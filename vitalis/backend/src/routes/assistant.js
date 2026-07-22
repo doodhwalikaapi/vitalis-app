@@ -9,21 +9,21 @@ const { answerHealthQuestion } = require('../utils/aiEngine');
 const router = express.Router();
 router.use(requireAuth);
 
-// If ANTHROPIC_API_KEY is set in the environment, the assistant is powered
-// by live Claude with the user's real profile injected as context, and the
-// last few turns of the conversation so it can actually chat naturally
-// (remembering what you just said, following up, etc). Otherwise it falls
-// back to the built-in rule-based engine so the app always works with zero
-// extra configuration or cost.
-async function askClaude(question, history, user, goals, metrics) {
-  const systemPrompt = `You are the AI health & fitness coach inside the Vitalis app. Talk like a knowledgeable, encouraging friend having a normal conversation — not a form letter. Keep replies short and natural (usually 1-4 sentences, more only if the person clearly wants detail). Use casual language, contractions, the occasional light bit of humor if it fits, and follow up on what they actually said rather than restating their whole profile every time. Never give medical diagnoses; suggest a doctor for anything that sounds medical. Only bring up specific numbers from the profile below when they're actually relevant to what's being asked.
+// If ANTHROPIC_API_KEY is set, the assistant is powered by live Claude.
+// Otherwise, if GEMINI_API_KEY is set, it uses Google's Gemini API, which
+// has a genuinely free tier (no billing required) - a good default for
+// getting real conversational AI without paying anything. If neither key
+// is set, it falls back to the built-in rules engine so the app always
+// works with zero configuration.
+function buildSystemPrompt(user, goals, metrics) {
+  return `You are the AI health & fitness coach inside the Vitalis app. Talk like a knowledgeable, encouraging friend having a normal conversation — not a form letter. Keep replies short and natural (usually 1-4 sentences, more only if the person clearly wants detail). Use casual language, contractions, the occasional light bit of humor if it fits, and follow up on what they actually said rather than restating their whole profile every time. Never give medical diagnoses; suggest a doctor for anything that sounds medical. Only bring up specific numbers from the profile below when they're actually relevant to what's being asked.
 
 User profile: ${user.age}y ${user.gender}, ${user.height_cm}cm, ${user.weight_kg}kg, activity level: ${user.activity_level}.
 Goals: ${goals.join(', ') || 'none set yet'}.
 Computed metrics: BMI ${metrics.bmi} (${metrics.bmiCategory}), BMR ${metrics.bmr} kcal, TDEE ${metrics.tdee} kcal, daily calorie target ${metrics.calorieTarget} kcal, protein ${metrics.macros.proteinG}g, carbs ${metrics.macros.carbG}g, fat ${metrics.macros.fatG}g, water goal ${metrics.waterIntakeMl}ml, sleep goal ${metrics.sleepHoursRecommended.min}-${metrics.sleepHoursRecommended.max}h, step goal ${metrics.dailyStepGoal}.`;
+}
 
-  // Keep the last 10 turns so it feels like a real conversation without the
-  // context growing unbounded.
+async function askClaude(question, history, user, goals, metrics) {
   const trimmedHistory = (history || []).slice(-10).map((m) => ({
     role: m.role === 'assistant' ? 'assistant' : 'user',
     content: m.text
@@ -39,14 +39,39 @@ Computed metrics: BMI ${metrics.bmi} (${metrics.bmiCategory}), BMR ${metrics.bmr
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 400,
-      system: systemPrompt,
+      system: buildSystemPrompt(user, goals, metrics),
       messages: [...trimmedHistory, { role: 'user', content: question }]
     })
   });
 
-  if (!response.ok) throw new Error(`Anthropic API error: ${response.status}`);
+  if (!response.ok) throw new Error(`Anthropic API error: ${response.status} ${await response.text()}`);
   const data = await response.json();
   const text = data.content.map((c) => c.text || '').join('\n').trim();
+  return text || null;
+}
+
+async function askGemini(question, history, user, goals, metrics) {
+  // Gemini uses "user"/"model" roles instead of "user"/"assistant".
+  const trimmedHistory = (history || []).slice(-10).map((m) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.text }]
+  }));
+
+  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: buildSystemPrompt(user, goals, metrics) }] },
+      contents: [...trimmedHistory, { role: 'user', parts: [{ text: question }] }]
+    })
+  });
+
+  if (!response.ok) throw new Error(`Gemini API error: ${response.status} ${await response.text()}`);
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('\n').trim();
   return text || null;
 }
 
@@ -70,7 +95,16 @@ router.post(
           answer = await askClaude(req.body.question, req.body.history, user, goals, metrics);
           source = 'claude';
         } catch (err) {
-          console.error('Claude call failed, falling back to rules engine:', err.message);
+          console.error('Claude call failed, trying next option:', err.message);
+        }
+      }
+
+      if (!answer && process.env.GEMINI_API_KEY) {
+        try {
+          answer = await askGemini(req.body.question, req.body.history, user, goals, metrics);
+          source = 'gemini';
+        } catch (err) {
+          console.error('Gemini call failed, falling back to rules engine:', err.message);
         }
       }
 
@@ -87,4 +121,3 @@ router.post(
 );
 
 module.exports = router;
-
