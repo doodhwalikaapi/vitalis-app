@@ -26,14 +26,18 @@ export default function Assistant() {
 
   async function send(text: string) {
     if (!text.trim()) return;
-    setMessages((m) => [...m, { role: 'user', text }]);
+    const nextMessages = [...messages, { role: 'user' as const, text }];
+    setMessages(nextMessages);
     setInput('');
     setLoading(true);
     try {
-      const res = await api.post('/api/assistant/ask', { question: text });
+      const res = await api.post('/api/assistant/ask', {
+        question: text,
+        history: nextMessages.slice(0, -1) // everything before this new question
+      });
       setMessages((m) => [...m, { role: 'assistant', text: res.answer }]);
     } catch (err: any) {
-      setMessages((m) => [...m, { role: 'assistant', text: `Sorry, something went wrong: ${err.message}` }]);
+      setMessages((m) => [...m, { role: 'assistant', text: `Hmm, something went wrong on my end: ${err.message}` }]);
     } finally {
       setLoading(false);
     }
@@ -67,7 +71,23 @@ export default function Assistant() {
             {m.text}
           </div>
         ))}
-        {loading && <div className="muted" style={{ fontSize: 13 }}>Thinking…</div>}
+        {loading && (
+          <div style={{ alignSelf: 'flex-start', background: 'var(--surface-2)', padding: '10px 16px', borderRadius: 16, display: 'flex', gap: 4 }}>
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: 'var(--ink-soft)',
+                  animation: `typingDot 1.2s ${i * 0.15}s infinite ease-in-out`
+                }}
+              />
+            ))}
+            <style>{`@keyframes typingDot { 0%, 60%, 100% { opacity: 0.3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }`}</style>
+          </div>
+        )}
         <div ref={endRef} />
       </div>
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
+import Illustration from '../components/Illustration';
 
 interface Recipe {
   id: string;
@@ -50,7 +51,9 @@ export default function Nutrition() {
   function RecipeCard({ r }: { r: Recipe }) {
     const isOpen = expanded === r.id;
     return (
-      <div className="card" style={{ marginBottom: 12 }}>
+      <div className="card" style={{ marginBottom: 12, overflow: 'hidden', padding: 0 }}>
+        <Illustration variant={r.mealType as any} seed={r.id} height={110} />
+        <div style={{ padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setExpanded(isOpen ? null : r.id)}>
           <div>
             <p style={{ fontWeight: 700, fontSize: 16 }}>{r.name}</p>
@@ -76,6 +79,7 @@ export default function Nutrition() {
             <p style={{ fontSize: 13, marginTop: 4 }}>Fiber: {r.fiberG}g</p>
           </div>
         )}
+        </div>
       </div>
     );
   }

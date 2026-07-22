@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
+import Illustration from '../components/Illustration';
+
+function primaryVariant(tags: string[]): any {
+  const order = ['strength', 'hiit', 'cardio', 'endurance', 'mobility', 'full_body'];
+  return order.find((t) => tags.includes(t)) || 'full_body';
+}
 
 interface Exercise {
   id: string;
@@ -70,7 +76,9 @@ export default function Workouts() {
     const isFav = favIds.has(ex.id);
     const isDone = completedIds.has(ex.id);
     return (
-      <div className="card" style={{ marginBottom: 12 }}>
+      <div className="card" style={{ marginBottom: 12, overflow: 'hidden', padding: 0 }}>
+        <Illustration variant={primaryVariant(ex.tags)} seed={ex.id} height={110} />
+        <div style={{ padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', cursor: 'pointer' }} onClick={() => setExpanded(isOpen ? null : ex.id)}>
           <div>
             <p style={{ fontWeight: 700, fontSize: 16 }}>{ex.name}</p>
@@ -99,6 +107,7 @@ export default function Workouts() {
             </button>
           </div>
         )}
+        </div>
       </div>
     );
   }
