@@ -52,7 +52,7 @@ export default function Nutrition() {
     const isOpen = expanded === r.id;
     return (
       <div className="card" style={{ marginBottom: 12, overflow: 'hidden', padding: 0 }}>
-        <RemoteImage query={`${r.name} food dish`} fallbackVariant={r.mealType as any} seed={r.id} height={140} />
+        <RemoteImage query={`${r.name} ${r.mealType}`} fallbackVariant={r.mealType as any} seed={r.id} />
         <div style={{ padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setExpanded(isOpen ? null : r.id)}>
           <div>

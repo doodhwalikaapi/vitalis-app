@@ -10,6 +10,7 @@
  */
 
 const cache = new Map();
+const usedPhotoIds = new Set();
 
 async function searchUnsplashImage(query) {
   const key = process.env.UNSPLASH_ACCESS_KEY;
@@ -21,7 +22,7 @@ async function searchUnsplashImage(query) {
   try {
     const url = new URL('https://api.unsplash.com/search/photos');
     url.searchParams.set('query', query);
-    url.searchParams.set('per_page', '1');
+    url.searchParams.set('per_page', '6');
     url.searchParams.set('orientation', 'landscape');
     url.searchParams.set('content_filter', 'high');
 
@@ -36,15 +37,28 @@ async function searchUnsplashImage(query) {
     }
 
     const data = await res.json();
-    const photo = data.results?.[0];
-    if (!photo) {
+    const results = data.results || [];
+    if (!results.length) {
       cache.set(cacheKey, null);
       return null;
     }
 
+    // Prefer a photo we haven't used for another card yet, so two similar
+    // searches (e.g. "Push-Up" and "Burpees") don't end up with the exact
+    // same stock photo. Falls back to the top result if everything's taken.
+    const photo = results.find((p) => !usedPhotoIds.has(p.id)) || results[0];
+    usedPhotoIds.add(photo.id);
+
+    // Unsplash's `raw` URL supports Imgix-style params, so we ask for an
+    // image cropped to the exact size/aspect ratio we display it at (a
+    // wide landscape card) at good quality. This avoids the blur/narrow
+    // look that comes from stretching their small default thumbnail into
+    // a different-shaped box.
+    const crispUrl = `${photo.urls.raw}&w=960&h=540&fit=crop&crop=entropy&q=80&auto=format`;
+
     const result = {
-      url: photo.urls.regular,
-      thumbUrl: photo.urls.small,
+      url: crispUrl,
+      thumbUrl: `${photo.urls.raw}&w=64&h=36&fit=crop&blur=20&q=40`,
       alt: photo.alt_description || query,
       photographerName: photo.user.name,
       photographerUrl: `${photo.user.links.html}?utm_source=vitalis_app&utm_medium=referral`,

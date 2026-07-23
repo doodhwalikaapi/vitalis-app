@@ -50,6 +50,37 @@ async function askClaude(question, history, user, goals, metrics) {
   return text || null;
 }
 
+async function askGroq(question, history, user, goals, metrics) {
+  const trimmedHistory = (history || []).slice(-10).map((m) => ({
+    role: m.role === 'assistant' ? 'assistant' : 'user',
+    content: m.text
+  }));
+
+  const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.GROQ_API_KEY}`
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: buildSystemPrompt(user, goals, metrics) },
+        ...trimmedHistory,
+        { role: 'user', content: question }
+      ],
+      max_tokens: 400
+    })
+  });
+
+  if (!response.ok) throw new Error(`Groq API error: ${response.status} ${await response.text()}`);
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content?.trim();
+  return text || null;
+}
+
 async function askGemini(question, history, user, goals, metrics) {
   // Gemini uses "user"/"model" roles instead of "user"/"assistant".
   const trimmedHistory = (history || []).slice(-10).map((m) => ({
@@ -99,6 +130,15 @@ router.post(
         }
       }
 
+      if (!answer && process.env.GROQ_API_KEY) {
+        try {
+          answer = await askGroq(req.body.question, req.body.history, user, goals, metrics);
+          source = 'groq';
+        } catch (err) {
+          console.error('Groq call failed, trying next option:', err.message);
+        }
+      }
+
       if (!answer && process.env.GEMINI_API_KEY) {
         try {
           answer = await askGemini(req.body.question, req.body.history, user, goals, metrics);
@@ -121,3 +161,4 @@ router.post(
 );
 
 module.exports = router;
+

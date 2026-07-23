@@ -77,7 +77,7 @@ export default function Workouts() {
     const isDone = completedIds.has(ex.id);
     return (
       <div className="card" style={{ marginBottom: 12, overflow: 'hidden', padding: 0 }}>
-        <RemoteImage query={`${ex.name} exercise fitness`} fallbackVariant={primaryVariant(ex.tags)} seed={ex.id} height={140} />
+        <RemoteImage query={`${ex.name} ${ex.muscles[0]} workout`} fallbackVariant={primaryVariant(ex.tags)} seed={ex.id} />
         <div style={{ padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', cursor: 'pointer' }} onClick={() => setExpanded(isOpen ? null : ex.id)}>
           <div>

@@ -19,12 +19,12 @@ export default function RemoteImage({
   query,
   fallbackVariant,
   seed,
-  height = 140
+  aspectRatio = '16 / 9'
 }: {
   query: string;
   fallbackVariant: Parameters<typeof Illustration>[0]['variant'];
   seed: string;
-  height?: number;
+  aspectRatio?: string;
 }) {
   const [image, setImage] = useState<UnsplashImage | null | undefined>(clientCache.get(query));
   const [failed, setFailed] = useState(false);
@@ -52,7 +52,11 @@ export default function RemoteImage({
 
   // No key configured, lookup failed, or nothing found -> abstract fallback.
   if (failed || image === null) {
-    return <Illustration variant={fallbackVariant} seed={seed} height={height} />;
+    return (
+      <div style={{ aspectRatio, width: '100%' }}>
+        <Illustration variant={fallbackVariant} seed={seed} height="100%" />
+      </div>
+    );
   }
 
   // Still loading.
@@ -60,7 +64,8 @@ export default function RemoteImage({
     return (
       <div
         style={{
-          height,
+          aspectRatio,
+          width: '100%',
           borderRadius: 'var(--radius-sm)',
           background: 'var(--surface-2)',
           animation: 'imgPulse 1.4s ease-in-out infinite'
@@ -72,12 +77,18 @@ export default function RemoteImage({
   }
 
   return (
-    <div style={{ position: 'relative', height, borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', aspectRatio, width: '100%', borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: 'var(--surface-2)' }}>
       <img
         src={image.thumbUrl}
+        alt=""
+        aria-hidden="true"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(8px)', transform: 'scale(1.1)' }}
+      />
+      <img
+        src={image.url}
         alt={image.alt}
         loading="lazy"
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        style={{ position: 'relative', width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         onError={() => setFailed(true)}
       />
       <a

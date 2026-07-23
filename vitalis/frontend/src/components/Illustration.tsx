@@ -17,7 +17,7 @@ function seededOffset(seed: string) {
   return h;
 }
 
-export default function Illustration({ variant, seed = '', height = 120 }: { variant: Variant; seed?: string; height?: number }) {
+export default function Illustration({ variant, seed = '', height = 120 }: { variant: Variant; seed?: string; height?: number | string }) {
   const o = seededOffset(seed);
   const dx = (o % 10) - 5;
   const dy = ((o * 3) % 10) - 5;
@@ -114,7 +114,13 @@ export default function Illustration({ variant, seed = '', height = 120 }: { var
   }
 
   return (
-    <svg viewBox="0 0 120 100" width="100%" height={height} style={{ display: 'block', borderRadius: 'var(--radius-sm)' }}>
+    <svg
+      viewBox="0 0 120 100"
+      width="100%"
+      height={height}
+      preserveAspectRatio="xMidYMid slice"
+      style={{ display: 'block', borderRadius: 'var(--radius-sm)' }}
+    >
       <rect width="120" height="100" rx="16" fill="var(--surface-2)" />
       {blobBg}
       {icon}
